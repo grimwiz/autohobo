@@ -505,6 +505,10 @@ boolean ah_sewerTurn()
 {
 	if(my_adventures() < 10)
 	{
+		cli_execute("autosea diet");
+	}
+	if(my_adventures() < 10)
+	{
 		ah_warn("The sewers need at least 10 adventures left to enter.");
 		return false;
 	}
@@ -668,7 +672,11 @@ void ah_run(int maxTurns)
 	{
 		if(my_adventures() <= reserve)
 		{
-			ah_info("Out of adventures (reserve " + reserve + ").");
+			cli_execute("autosea diet");	//eat and drink rather than stop (autosea fills the organs for every auto script)
+		}
+		if(my_adventures() <= reserve)
+		{
+			ah_info("Out of adventures (reserve " + reserve + "), and nothing more worth eating or drinking.");
 			break;
 		}
 		int target = ah_targetZone(zones);
