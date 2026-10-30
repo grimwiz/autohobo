@@ -372,7 +372,13 @@ boolean ah_adv(location loc, monster hobo, boolean physical)
 		ah_warn("Beaten up in " + loc + ". Stopping.");
 		return false;
 	}
-	return ok || my_turncount() > turnsBefore;
+	if(!ok && my_turncount() == turnsBefore)
+	{
+		ah_warn("The adventure at " + loc + " didn't happen (HP " + my_hp() + "/" + my_maxhp() + ", adventures " + my_adventures()
+			+ "). KoLmafia's reason is in the CLI just above; \"autohobo pages\" shows what the Hobopolis pages say.");
+		return false;
+	}
+	return true;
 }
 
 // ---------------------------------------------------------------- sewers
@@ -636,6 +642,17 @@ void ah_run(int maxTurns)
 	ah_info("Spent " + (my_turncount() - start) + " turns.");
 }
 
+// the Hobopolis pages as text, to see what the game says when autohobo can't get in
+void ah_pages()
+{
+	foreach url in $strings[clan_hobopolis.php, clan_hobopolis.php?place=2, clan_basement.php?fromabove=1]
+	{
+		string text = create_matcher("<[^>]*>", visit_url(url)).replace_all(" ");
+		text = create_matcher("\\s+", text).replace_all(" ");
+		ah_info(url + ": " + (text.length() > 1500 ? text.substring(0, 1500) + "..." : text));
+	}
+}
+
 void main(string... args)
 {
 	//KoLmafia may pass "status" or "50" as one argument or several; join and split it ourselves
@@ -650,9 +667,14 @@ void main(string... args)
 		ah_status();
 		return;
 	}
+	if(words[0] == "pages")
+	{
+		ah_pages();
+		return;
+	}
 	if(words[0] != "" && words[0].to_int() <= 0)
 	{
-		ah_warn("Usage: autohobo [turns] | autohobo status");
+		ah_warn("Usage: autohobo [turns] | autohobo status | autohobo pages");
 		return;
 	}
 	int turns = words[0] == "" ? -1 : words[0].to_int();

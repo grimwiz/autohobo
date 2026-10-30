@@ -10,6 +10,7 @@ Grease Lightning) and the five 30-MP buffs that drop next to them.
 autohobo            farm until you have a book for every unpermed skill, the zones run out of hobos, or adventures run out
 autohobo 100        the same, spending at most 100 turns
 autohobo status     show the instance and which skills are missing, without adventuring
+autohobo pages      print the Hobopolis and clan basement pages as text (for when it can't get in)
 ```
 
 Run `autohobo status` first. It spends no turns. For each skill you haven't permed, it says whether you know it this life
