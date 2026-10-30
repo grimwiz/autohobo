@@ -1,26 +1,29 @@
 # autohobo
 
 A KoLmafia script that adventures in your clan's Hobopolis for the skill books that teach the Hobopolis skills you
-don't know yet: the five 120-MP elemental spells (Awesome Balls of Fire, Snowclone, Eggsplosion, Raise Backup Dancer,
+haven't permed: the five 120-MP elemental spells (Awesome Balls of Fire, Snowclone, Eggsplosion, Raise Backup Dancer,
 Grease Lightning) and the five 30-MP buffs that drop next to them.
 
 ## Usage
 
 ```
-autohobo            farm until every Hobopolis skill is known, the zones run out of hobos, or adventures run out
+autohobo            farm until you have a book for every unpermed skill, the zones run out of hobos, or adventures run out
 autohobo 100        the same, spending at most 100 turns
 autohobo status     show the instance and which skills are missing, without adventuring
 ```
 
-Run `autohobo status` first. It spends no turns. For each skill you lack, it says whether you own the book but
-haven't read it (and where it is: inventory, closet, Hagnk's, your store or display case) or have no copy (with the
-mall price). Then it shows whether you can get into Hobopolis and how far each zone has got.
+Run `autohobo status` first. It spends no turns. For each skill you haven't permed, it says whether you know it this life
+only (perm it or lose it), have its book unread (and where: inventory, closet, Hagnk's, your store or display case),
+or have no copy (with the mall price). Then it shows whether you can get into Hobopolis and how far each zone has got.
 
 ## What it does
 
 Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopolis state) and:
 
-- **Reads any book you already own** (inventory, closet, Hagnk's, your store). Skills learned in aftercore are permanent.
+- **Never reads a book.** A skill learned now is lost when you ascend unless you perm it in Valhalla (100 Karma), and
+  Karma only covers one or two perms an ascension. So autohobo collects books and leaves the reading to you. A skill counts
+  as needed only if it isn't permed, isn't known this life, and you have no copy of its book (inventory, closet,
+  Hagnk's, store or display case).
 - **Picks the zone**: the first side zone, in opening order, whose books you still need and that still has hobos.
 
 | Zone | Opens at (Town Square kills) | Books |

@@ -1,13 +1,14 @@
 script "autohobo.ash";
 since r29000;
 
-// autohobo: adventures in your clan's Hobopolis for the skill books that teach the Hobopolis skills you don't know.
+// autohobo: adventures in your clan's Hobopolis for the skill books that teach the Hobopolis skills you haven't permed.
+// It collects the books and never reads them: a skill read now is lost at ascension unless you perm it.
 // Each side zone's hobos drop two books (a 120-MP elemental spell and a 30-MP buff). A zone holds about 500 hobos and
 // only fights give drops, so autohobo fights them, takes the noncombats that add more hobos, skips the ones that kill
 // hobos without drops, and never starts a boss fight.
 //
 // Usage (KoLmafia command line):
-//   autohobo          farm until every Hobopolis skill is known, the zones run out of hobos, or adventures run out
+//   autohobo          farm until you have a book for every unpermed skill, the zones run out of hobos, or adventures run out
 //   autohobo N        the same, spending at most N turns
 //   autohobo status   show the instance and which skills are missing, without adventuring
 
@@ -91,11 +92,6 @@ ah_zone[int] ah_zones()
 	return zones;
 }
 
-boolean ah_zoneWanted(ah_zone z)
-{
-	return !have_skill(z.spell) || (!have_skill(z.buff) && ah_setting("buffs", "true").to_boolean());
-}
-
 // ---------------------------------------------------------------- reading the instance
 // KoLmafia keeps no Hobopolis state, so read the pages. Every zone page shows a picture numbered by progress:
 // the Town Square goes 0-25 (125 kills a step; "125" is the 12.5 tent step), a side zone 0-10 (10: boss is up,
@@ -175,47 +171,53 @@ boolean ah_zoneExhausted(ah_zone z)
 }
 
 // ---------------------------------------------------------------- books
-// A book you already own (inventory, closet, Hagnk's, your store) is read straight away: learned in aftercore, the
-// skill is permanent.
+// autohobo never reads a book. A skill learned now lasts only until you ascend unless you perm it in Valhalla
+// (100 Karma each), and Karma covers only one or two perms an ascension, so books are kept until you choose to read
+// one. A skill still needs a book when it isn't permed, isn't known this life, and you have no copy of its book.
 
-boolean ah_fetch(item it)
+// the zone's two skills and the books that teach them
+item[skill] ah_zoneBooks(ah_zone z)
 {
-	if(item_amount(it) == 0 && closet_amount(it) > 0)
-	{
-		take_closet(1, it);
-	}
-	if(item_amount(it) == 0 && storage_amount(it) > 0 && can_interact())
-	{
-		take_storage(1, it);
-	}
-	if(item_amount(it) == 0 && shop_amount(it) > 0 && can_interact())
-	{
-		take_shop(1, it);
-	}
-	return item_amount(it) > 0;
+	item[skill] books;
+	books[z.spell] = z.spellBook;
+	books[z.buff] = z.buffBook;
+	return books;
 }
 
-void ah_readBook(skill sk, item book)
+// where you keep a copy of the book, or "" if you have none
+string ah_bookWhere(item book)
 {
-	if(have_skill(sk) || !ah_fetch(book))
+	if(item_amount(book) > 0)
 	{
-		return;
+		return "inventory";
 	}
-	ah_info("Reading " + book + " to learn " + sk + ".");
-	use(1, book);
-	if(!have_skill(sk))
+	if(closet_amount(book) > 0)
 	{
-		ah_warn("Read " + book + " but " + sk + " still isn't known.");
+		return "closet";
 	}
+	if(storage_amount(book) > 0)
+	{
+		return "Hagnk's";
+	}
+	if(shop_amount(book) > 0)
+	{
+		return "your store";
+	}
+	if(display_amount(book) > 0)
+	{
+		return "display case";
+	}
+	return "";
 }
 
-void ah_readOwnedBooks()
+boolean ah_skillNeeded(skill sk, item book)
 {
-	foreach i, z in ah_zones()
-	{
-		ah_readBook(z.spell, z.spellBook);
-		ah_readBook(z.buff, z.buffBook);
-	}
+	return !(get_permed_skills() contains sk) && !have_skill(sk) && ah_bookWhere(book) == "";
+}
+
+boolean ah_zoneWanted(ah_zone z)
+{
+	return ah_skillNeeded(z.spell, z.spellBook) || (ah_skillNeeded(z.buff, z.buffBook) && ah_setting("buffs", "true").to_boolean());
 }
 
 // ---------------------------------------------------------------- choices
@@ -489,52 +491,18 @@ boolean ah_townTurn()
 
 // ---------------------------------------------------------------- status
 
-// the zone's two skills and the books that teach them
-item[skill] ah_zoneBooks(ah_zone z)
-{
-	item[skill] books;
-	books[z.spell] = z.spellBook;
-	books[z.buff] = z.buffBook;
-	return books;
-}
-
-// where you keep a copy of the book, or "" if you have none
-string ah_bookWhere(item book)
-{
-	if(item_amount(book) > 0)
-	{
-		return "inventory";
-	}
-	if(closet_amount(book) > 0)
-	{
-		return "closet";
-	}
-	if(storage_amount(book) > 0)
-	{
-		return "Hagnk's";
-	}
-	if(shop_amount(book) > 0)
-	{
-		return "your store";
-	}
-	if(display_amount(book) > 0)
-	{
-		return "display case";
-	}
-	return "";
-}
-
-// why a skill is missing: a book you own but haven't read, or no book at all
+// why a skill isn't permed yet: known this life only, a book you own but haven't read, or no book at all
 string ah_missingWhy(skill sk, item book)
 {
 	string where = ah_bookWhere(book);
-	if(where == "display case")
+	if(have_skill(sk))
 	{
-		return sk + ": " + book + " is in your display case. Take it out and autohobo will read it.";
+		return sk + ": known this life only. Perm it in Valhalla (100 Karma) or it's lost when you ascend"
+			+ (where == "" ? "." : "; you also have " + book + " (" + where + ").");
 	}
 	if(where != "")
 	{
-		return sk + ": you own " + book + " (" + where + ") but haven't read it. autohobo reads it before adventuring.";
+		return sk + ": you have " + book + " (" + where + "), unread. Read it when you can perm the skill at the next Valhalla.";
 	}
 	int price = mall_price(book);
 	return sk + ": no " + book + (price > 0 ? " (mall about " + price + ")." : " (none in the mall).");
@@ -548,7 +516,7 @@ void ah_status()
 	{
 		foreach sk, book in ah_zoneBooks(z)
 		{
-			if(!have_skill(sk))
+			if(!(get_permed_skills() contains sk))
 			{
 				ah_info(ah_missingWhy(sk, book));
 				missing += 1;
@@ -557,7 +525,7 @@ void ah_status()
 	}
 	if(missing == 0)
 	{
-		ah_info("You know every Hobopolis skill.");
+		ah_info("Every Hobopolis skill is permed.");
 	}
 	string stage = ah_stage();
 	if(stage == "")
@@ -582,7 +550,7 @@ void ah_status()
 		string books = "";
 		foreach sk, book in ah_zoneBooks(z)
 		{
-			if(!have_skill(sk) && ah_bookWhere(book) == "")
+			if(ah_skillNeeded(sk, book))
 			{
 				books += (books == "" ? "" : " and ") + book;
 			}
@@ -618,11 +586,10 @@ void ah_run(int maxTurns)
 			ah_info("Out of adventures (reserve " + reserve + ").");
 			break;
 		}
-		ah_readOwnedBooks();
 		int target = ah_targetZone(zones);
 		if(target < 0)
 		{
-			ah_info("Nothing left to farm: every Hobopolis skill is known, or the zones with missing books have no hobos left.");
+			ah_info("Nothing left to farm: every Hobopolis skill is permed, known this life, or has a book waiting; or the zones with the missing books have no hobos left.");
 			break;
 		}
 		ah_zone z = zones[target];
@@ -642,7 +609,19 @@ void ah_run(int maxTurns)
 		}
 		else
 		{
+			int[item] before;
+			foreach sk, book in ah_zoneBooks(z)
+			{
+				before[book] = item_amount(book);
+			}
 			acted = ah_adv(z.loc, z.hobo, z.physicalOnly);
+			foreach sk, book in ah_zoneBooks(z)
+			{
+				if(item_amount(book) > before[book])
+				{
+					ah_info("Got " + book + ". Keep it until you can perm " + sk + " (read it, then perm it at the next Valhalla).");
+				}
+			}
 			if(!acted && ah_zoneExhausted(z))
 			{
 				ah_info(z.loc + " has no hobos left (the boss is waiting).");
@@ -654,7 +633,6 @@ void ah_run(int maxTurns)
 			break;
 		}
 	}
-	ah_readOwnedBooks();
 	ah_info("Spent " + (my_turncount() - start) + " turns.");
 }
 
