@@ -228,7 +228,7 @@ void ah_setChoices()
 {
 	int[int] picks = {
 		197: 1, 198: 1, 199: 1,	//sewers: take the tunnel (each test item passed counts as an extra exploration)
-		211: 1, 212: 1,	//caged in the sewers: gnaw out (10 turns) rather than wait for a rescuer
+		211: 0, 212: 0,	//caged in the sewers: stop, and ask for rescue first (ah_sewerTurn decides what to do next)
 		200: 2, 225: 3, 230: 2, 272: 2,	//Town Square: no Hodgman, no tent, no binder or marketplace
 		201: 2, 206: 3, 207: 1, 213: 2, 291: 2,	//Burnbarrel: more hot hobos; no tires, no Ol' Scratch
 		202: 2, 215: 3, 217: 1, 273: 2, 292: 2,	//Esplanade: more cold hobos; no Frosty
@@ -383,18 +383,22 @@ boolean ah_adv(location loc, monster hobo, boolean physical)
 
 // ---------------------------------------------------------------- sewers
 // Each player explores 100 times (a kill counts 1, a tunnel with a test item counts more), then one more turn
-// reaches the Town Square. The test items are used up when they pass, so keep one of each in stock.
+// reaches the Town Square. The test items are used up when they pass. Clan custom (Not Dead Yet) is that the
+// others are rarely worth their price, so only sewer wads are kept in stock unless autohobo_sewerItems says more
+// (any of: gatorskin umbrella, unfortunate dumplings, sewer wad, bottle of Ooze-O, oil of oiliness).
 
 void ah_stockSewerItems()
 {
 	int maxPrice = ah_setting("maxPrice", "5000").to_int();
-	int[item] want = {
-		$item[gatorskin umbrella]: 1,
-		$item[unfortunate dumplings]: 1,
-		$item[sewer wad]: 1,
-		$item[bottle of Ooze-O]: 1,
-		$item[oil of oiliness]: 3,
-	};
+	int[item] want;
+	foreach i, name in ah_setting("sewerItems", "sewer wad").split_string(",")
+	{
+		item it = create_matcher("^\\s+|\\s+$", name).replace_all("").to_item();
+		if(it != $item[none])
+		{
+			want[it] = it == $item[oil of oiliness] ? 3 : 1;
+		}
+	}
 	foreach it, n in want
 	{
 		if(available_amount(it) >= n)
@@ -438,11 +442,74 @@ string ah_cagedClanmate()
 	return minutes > ah_setting("cageMinutes", "60").to_int() ? "" : who;
 }
 
+// You caged: the clan asks you to request a rescue in /hobopolis and /clan before gnawing out. autohobo asks once
+// and stops; a later run waits on a rescue (heard by autohobo_chat.ash), and only after autohobo_gnawAfter minutes
+// with none does it gnaw out.
+string ah_requestRescue()
+{
+	string msg = "I've been caged by the C. H. U. M.s in the sewers. Could someone still in the sewers free me via the ladder, please?";
+	chat_clan(msg, "hobopolis");
+	chat_clan(msg);
+	return msg;
+}
+
+// true if this turn may go ahead; false (with the reason said) to stop the run while waiting for a rescue
+boolean ah_cagePlan()
+{
+	string cagedAt = get_property("_autohobo_myCageAt");
+	if(cagedAt == "")
+	{
+		return true;
+	}
+	if(get_property("_autohobo_rescued").to_boolean())
+	{
+		ah_info("A clanmate went down the ladder for you: leaving the cage.");
+		ah_overrideProperty("choiceAdventure211", "2");
+		ah_overrideProperty("choiceAdventure212", "2");
+		return true;
+	}
+	int minutes = (now_to_int() - cagedAt.to_int()) / 60000;
+	int limit = ah_setting("gnawAfter", "60").to_int();
+	if(minutes >= limit)
+	{
+		ah_info("No rescue in " + minutes + " minutes: gnawing out of the cage (10 turns).");
+		ah_overrideProperty("choiceAdventure211", "1");
+		ah_overrideProperty("choiceAdventure212", "1");
+		return true;
+	}
+	ah_warn("You're caged in the sewers and asked for a rescue " + minutes + " minutes ago. Run autohobo again later: it "
+		+ "leaves the cage when someone frees you, or gnaws out after " + limit + " minutes (autohobo_gnawAfter).");
+	return false;
+}
+
+void ah_cageAfterTurn()
+{
+	if(get_property("lastEncounter") != "Despite All Your Rage")
+	{
+		return;
+	}
+	if(get_property("_autohobo_myCageAt") == "")
+	{
+		set_property("_autohobo_myCageAt", now_to_int().to_string());
+		ah_warn("The C. H. U. M.s caged you. Asked for a rescue in /hobopolis and /clan: \"" + ah_requestRescue() + "\"");
+	}
+	else if(get_property("choiceAdventure211") != "0")
+	{
+		//we chose to leave (a rescue arrived, or gnawing): the cage is behind us
+		set_property("_autohobo_myCageAt", "");
+		set_property("_autohobo_rescued", "");
+	}
+}
+
 boolean ah_sewerTurn()
 {
 	if(my_adventures() < 10)
 	{
 		ah_warn("The sewers need at least 10 adventures left to enter.");
+		return false;
+	}
+	if(!ah_cagePlan())
+	{
 		return false;
 	}
 	ah_stockSewerItems();
@@ -455,11 +522,16 @@ boolean ah_sewerTurn()
 	set_property("lastEncounter", "");
 	int turnsBefore = my_turncount();
 	boolean ok = ah_adv($location[A Maze of Sewer Tunnels], $monster[C. H. U. M.], false);
-	if(!ok && my_turncount() == turnsBefore && have_effect($effect[Beaten Up]) == 0)
+	if(!ok && my_turncount() == turnsBefore && have_effect($effect[Beaten Up]) == 0 && get_property("lastEncounter") == "")
 	{
 		//the Hobopolis page links the sewers even when the grate is shut, and the game then says "You shouldn't be here"
 		ah_warn("The game won't let you into the sewers. Your clan's Hobopolis is probably closed: after Hodgman dies "
 			+ "the instance has to be flooded, then a basement admin opens the sewer grate again (1,000,000 meat).");
+	}
+	ah_cageAfterTurn();
+	if(get_property("_autohobo_myCageAt") != "" && get_property("choiceAdventure211") == "0")
+	{
+		return false;	//just caged: wait for a rescue rather than carry on
 	}
 	if(caged != "" && get_property("lastEncounter") == "The Former or the Ladder")
 	{
@@ -638,6 +710,13 @@ void ah_run(int maxTurns)
 			if(!acted && ah_zoneExhausted(z))
 			{
 				ah_info(z.loc + " has no hobos left (the boss is waiting).");
+				//clan rule: when a boss appears, tell everyone in /hobopolis so people can queue for it
+				string told = get_property("_autohobo_bossesAnnounced");
+				if(!told.contains_text("|" + z.place + "|"))
+				{
+					chat_clan("The boss in " + z.loc + " is up. I'm not fighting it, so it's free for whoever's next in the queue.", "hobopolis");
+					set_property("_autohobo_bossesAnnounced", (told == "" ? "|" : told) + z.place + "|");
+				}
 				acted = true;	//the next pass picks another zone
 			}
 		}

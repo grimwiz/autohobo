@@ -35,9 +35,12 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
 | The Ancient Hobo Burial Ground | 1000 | Let Me Be! (Raise Backup Dancer), Asleep in the Cemetery (Creepy Lullaby) |
 | The Purple Light District | 1250 | Summer Nights (Grease Lightning), Sensual Massage for Creeps (Inappropriate Backrub) |
 
-- **Sewers** if you haven't been through them: it keeps a gatorskin umbrella (equipped), unfortunate dumplings, a sewer
-  wad, a bottle of Ooze-O and 3 oil of oiliness in stock, and wears your hobo code binder. If you get caged, it gnaws
-  out (10 turns) rather than wait for a rescuer.
+- **Sewers** if you haven't been through them. It keeps sewer wads in stock (the clan custom: the other test items are
+  rarely worth their price; `autohobo_sewerItems` adds them), equips a gatorskin umbrella if you have one, and wears
+  your hobo code binder.
+- **If you get caged**, it follows the clan rule: it asks for a rescue in `/hobopolis` and `/clan`, then stops. Run it
+  again later. It leaves the cage when someone comes down the ladder for you (heard on `/hobopolis`), or gnaws out
+  (10 turns) once `autohobo_gnawAfter` minutes (60) pass without a rescue.
 - **Rescues caged clanmates.** While you're still in the sewers and a clanmate is caged, it takes the ladder in The
   Former or the Ladder. That frees them for 1 of your turns instead of 10 of theirs. It learns who is caged from
   the game's messages on `/hobopolis` (see below), and it leaves cagebait bots (`autohobo_cagebait`) where they are:
@@ -47,12 +50,20 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
 - **The side zone.** Book drops only come from fights, and a zone has only about 500 hobos, so it takes the
   noncombats that *add* hobos (Hot Dog door, Returning to the Tomb, and so on). It skips the ones that kill hobos without
   drops (tirevalanche, the zombie dance, barfights), and it **never fights a boss**. When a zone's boss turns up, that
-  zone has no hobos left, so it moves to the next zone.
+  zone has no hobos left, so it announces the boss in `/hobopolis` (a clan rule, so people can queue for it) and
+  moves to the next zone.
 - **Burial Ground**: spooky hobos take 1 damage from any element, so it fights them with physical damage. It uses
   pasta spells (Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens) with any Flavour of Magic spirit removed,
   and falls back to a weapon attack if a skill doesn't hurt. Elsewhere your own combat settings fight.
 
 Every choice setting it changes is put back when it finishes.
+
+## Clan rules (Not Dead Yet)
+
+autohobo follows the parts of the clan's Hobopolis rules that a script can: it asks for a rescue before gnawing,
+rescues others, uses only sewer wads, announces bosses, never fights a boss, and never takes I Refuse! (which you
+announce and share by hand). The rest is up to you: be in chat listening to `/hobopolis` and `/clan`, keep your loot
+preferences in the clan's spreadsheet, and pay the stash for any loot you're given.
 
 ## Before you start
 
@@ -82,6 +93,8 @@ messages to arrive, KoLmafia's chat has to be open (the chat window, or chat in 
 | `dangerRounds` | `3` | rounds of expected damage that must fit in 90% of your HP |
 | `mpFloor` | `150` | restore MP when it falls below this |
 | `maxPrice` | `5000` | most it pays for a sewer test item |
+| `sewerItems` | `sewer wad` | comma-separated sewer test items to keep in stock |
+| `gnawAfter` | `60` | minutes to wait for a rescue before gnawing out of the cage |
 | `advReserve` | `0` | adventures to leave unspent |
 | `cagebait` | `ASSBot` | comma-separated players never to free from the cage |
 | `cageMinutes` | `60` | ignore a cage report older than this (they've probably gnawed out) |

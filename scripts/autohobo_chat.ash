@@ -13,6 +13,11 @@ script "autohobo_chat.ash";
 
 void ah_chatFreed(string who)
 {
+	if(who.to_lower_case() == my_name().to_lower_case())
+	{
+		set_property("_autohobo_myCageAt", "");	//you're out
+		set_property("_autohobo_rescued", "");
+	}
 	if(get_property("_autohobo_caged").to_lower_case() == who.to_lower_case())
 	{
 		set_property("_autohobo_caged", "");
@@ -30,6 +35,14 @@ void main(string sender, string message, string channel)
 	matcher m = create_matcher("^(.+?) has been imprisoned by the C\\. H\\. U\\. M\\.s", text);
 	if(m.find())
 	{
+		if(m.group(1).to_lower_case() == my_name().to_lower_case())
+		{
+			if(get_property("_autohobo_myCageAt") == "")
+			{
+				set_property("_autohobo_myCageAt", now_to_int().to_string());
+			}
+			return;
+		}
 		set_property("_autohobo_caged", m.group(1));
 		set_property("_autohobo_cagedAt", now_to_int().to_string());
 		print("[autohobo] " + m.group(1) + " is caged in the sewers.", "blue");
@@ -44,6 +57,12 @@ void main(string sender, string message, string channel)
 	m = create_matcher("^(.+?) has rescued (.+?) from the C\\. H\\. U\\. M\\.s", text);
 	if(m.find())
 	{
+		if(m.group(2).to_lower_case() == my_name().to_lower_case())
+		{
+			set_property("_autohobo_rescued", "true");	//autohobo leaves the cage on its next sewer turn
+			print("[autohobo] " + m.group(1) + " came down the ladder for you. Run autohobo to leave the cage.", "blue");
+			return;
+		}
 		ah_chatFreed(m.group(2));
 		print("[autohobo] " + m.group(1) + " freed " + m.group(2) + " from the cage.", "blue");
 		return;
