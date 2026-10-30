@@ -1,0 +1,68 @@
+# autohobo
+
+A KoLmafia script that adventures in your clan's Hobopolis for the skill books that teach the Hobopolis skills you
+don't know yet: the five 120-MP elemental spells (Awesome Balls of Fire, Snowclone, Eggsplosion, Raise Backup Dancer,
+Grease Lightning) and the five 30-MP buffs that drop next to them.
+
+## Usage
+
+```
+autohobo            farm until every Hobopolis skill is known, the zones run out of hobos, or adventures run out
+autohobo 100        the same, spending at most 100 turns
+autohobo status     show the instance and which skills are missing, without adventuring
+```
+
+Run `autohobo status` first: it spends no turns, and tells you whether you can get in at all.
+
+## What it does
+
+Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopolis state) and:
+
+- **Reads any book you already own** (inventory, closet, Hagnk's, your store). Skills learned in aftercore are permanent.
+- **Picks the zone**: the first side zone, in opening order, whose books you still need and that still has hobos.
+
+| Zone | Opens at (Town Square kills) | Books |
+|---|---|---|
+| Burnbarrel Blvd. | 250 | Kissin' Cousins (Awesome Balls of Fire), Tales from the Fireside (Conjure Relaxing Campfire) |
+| Exposure Esplanade | 500 | Blizzards I Have Died In (Snowclone), Maxing, Relaxing (Maximum Chill) |
+| The Heap | 750 | Biddy Cracker's Old-Fashioned Cookbook (Eggsplosion), Travels with Jerry (Mudbath) |
+| The Ancient Hobo Burial Ground | 1000 | Let Me Be! (Raise Backup Dancer), Asleep in the Cemetery (Creepy Lullaby) |
+| The Purple Light District | 1250 | Summer Nights (Grease Lightning), Sensual Massage for Creeps (Inappropriate Backrub) |
+
+- **Sewers** if you haven't been through them: it keeps a gatorskin umbrella (equipped), unfortunate dumplings, a sewer
+  wad, a bottle of Ooze-O and 3 oil of oiliness in stock, and wears your hobo code binder. If you get caged, it gnaws
+  out (10 turns) rather than wait for a rescuer.
+- **Town Square** until the zone it wants is open. Whenever Richard has a full set of six hobo parts it makes
+  scarehobos, which kill hobos without a turn.
+- **The side zone.** Book drops only come from fights, and a zone has only about 500 hobos, so it takes the
+  noncombats that *add* hobos (Hot Dog door, Returning to the Tomb, and so on). It skips the ones that kill hobos without
+  drops (tirevalanche, the zombie dance, barfights), and it **never fights a boss**. When a zone's boss turns up, that
+  zone has no hobos left, so it moves to the next zone.
+- **Burial Ground**: spooky hobos take 1 damage from any element, so it fights them with physical damage. It uses
+  pasta spells (Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens) with any Flavour of Magic spirit removed,
+  and falls back to a weapon attack if a skill doesn't hurt. Elsewhere your own combat settings fight.
+
+Every choice setting it changes is put back when it finishes.
+
+## Before you start
+
+- Your clan needs an open Hobopolis instance, and you need dungeon permission. Opening the sewer grate costs
+  1,000,000 meat and needs a basement admin; autohobo never does that for you.
+- Hobos hit hard (Attack 300 in the Town Square, 350 in the side zones) and have special attacks that ignore Moxie.
+  autohobo refuses a zone where 3 rounds of hits would cost 90% of your HP.
+- Book drop rates aren't known. All the books are tradeable, and the mall is often cheaper than the turns: Kissin'
+  Cousins sold for about 137,000 meat and Let Me Be! about 65,000 in October 2026.
+
+## Settings
+
+`set autohobo_<name> = <value>`
+
+| Setting | Default | |
+|---|---|---|
+| `maximize` | `item drop, mainstat, moxie, 0.5 hp, 3 dr` | maximizer terms for the side zones and Town Square (spell damage, or weapon damage in the Burial Ground, is added) |
+| `buffs` | `true` | also farm for the 30-MP buff books, not only the spells |
+| `dangerRounds` | `3` | rounds of expected damage that must fit in 90% of your HP |
+| `mpFloor` | `150` | restore MP when it falls below this |
+| `maxPrice` | `5000` | most it pays for a sewer test item |
+| `advReserve` | `0` | adventures to leave unspent |
+| `debug` | `false` | print extra detail |
