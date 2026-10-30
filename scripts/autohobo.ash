@@ -453,7 +453,14 @@ boolean ah_sewerTurn()
 	}
 	ah_overrideProperty("choiceAdventure199", caged != "" ? "3" : "1");
 	set_property("lastEncounter", "");
+	int turnsBefore = my_turncount();
 	boolean ok = ah_adv($location[A Maze of Sewer Tunnels], $monster[C. H. U. M.], false);
+	if(!ok && my_turncount() == turnsBefore && have_effect($effect[Beaten Up]) == 0)
+	{
+		//the Hobopolis page links the sewers even when the grate is shut, and the game then says "You shouldn't be here"
+		ah_warn("The game won't let you into the sewers. Your clan's Hobopolis is probably closed: after Hodgman dies "
+			+ "the instance has to be flooded, then a basement admin opens the sewer grate again (1,000,000 meat).");
+	}
 	if(caged != "" && get_property("lastEncounter") == "The Former or the Ladder")
 	{
 		ah_info("Went down the ladder for " + caged + ".");
