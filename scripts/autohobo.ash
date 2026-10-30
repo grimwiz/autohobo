@@ -404,6 +404,32 @@ void ah_stockSewerItems()
 	}
 }
 
+// ---------------------------------------------------------------- the cage
+// Now and then the C. H. U. M.s cage someone in the sewers. They can gnaw out (10 turns), or a clanmate still in
+// the sewers frees them by going down the ladder in The Former or the Ladder (1 turn). autohobo_chat.ash hears the
+// game's /hobopolis messages and records who is caged; then the ladder is taken instead of the tunnel. Clans often
+// keep a bot in the cage on purpose ("cagebait": only one player fits, so nobody else gets caged), so names in
+// autohobo_cagebait are left there.
+
+string ah_cagedClanmate()
+{
+	string who = get_property("_autohobo_caged");
+	if(who == "" || who.to_lower_case() == my_name().to_lower_case())
+	{
+		return "";
+	}
+	foreach i, bait in ah_setting("cagebait", "ASSBot").split_string(",")
+	{
+		if(create_matcher("^\\s+|\\s+$", bait).replace_all("").to_lower_case() == who.to_lower_case())
+		{
+			return "";
+		}
+	}
+	//a cage nobody has mentioned for an hour has probably been gnawed out of (the chat may have been closed)
+	int minutes = (now_to_int() - get_property("_autohobo_cagedAt").to_int()) / 60000;
+	return minutes > ah_setting("cageMinutes", "60").to_int() ? "" : who;
+}
+
 boolean ah_sewerTurn()
 {
 	if(my_adventures() < 10)
@@ -412,7 +438,20 @@ boolean ah_sewerTurn()
 		return false;
 	}
 	ah_stockSewerItems();
-	return ah_adv($location[A Maze of Sewer Tunnels], $monster[C. H. U. M.], false);
+	string caged = ah_cagedClanmate();
+	if(caged != "")
+	{
+		ah_info(caged + " is caged: taking the ladder to free them if The Former or the Ladder comes up.");
+	}
+	ah_overrideProperty("choiceAdventure199", caged != "" ? "3" : "1");
+	set_property("lastEncounter", "");
+	boolean ok = ah_adv($location[A Maze of Sewer Tunnels], $monster[C. H. U. M.], false);
+	if(caged != "" && get_property("lastEncounter") == "The Former or the Ladder")
+	{
+		ah_info("Went down the ladder for " + caged + ".");
+		set_property("_autohobo_caged", "");	//don't go again even if the chat message is missed
+	}
+	return ok;
 }
 
 // ---------------------------------------------------------------- Town Square
@@ -456,6 +495,10 @@ void ah_status()
 	if(stage == "")
 	{
 		return;
+	}
+	if(get_property("_autohobo_caged") != "")
+	{
+		ah_info(get_property("_autohobo_caged") + " was caged in the sewers, as last heard on /hobopolis.");
 	}
 	if(stage == "sewers")
 	{
@@ -572,6 +615,16 @@ void main(string... args)
 	{
 		ah_setChoices();
 		ah_overrideProperty("choiceAdventureScript", "");
+		//listen to /hobopolis for caged clanmates, unless you already run a chatbot script of your own
+		string bot = get_property("chatbotScript");
+		if(bot == "")
+		{
+			ah_overrideProperty("chatbotScript", "autohobo_chat.ash");
+		}
+		else if(!bot.contains_text("autohobo_chat"))
+		{
+			ah_warn("Your chatbot script (" + bot + ") is set, so autohobo won't hear who gets caged in the sewers.");
+		}
 		ah_run(turns);
 	}
 	finally

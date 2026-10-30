@@ -32,6 +32,10 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
 - **Sewers** if you haven't been through them: it keeps a gatorskin umbrella (equipped), unfortunate dumplings, a sewer
   wad, a bottle of Ooze-O and 3 oil of oiliness in stock, and wears your hobo code binder. If you get caged, it gnaws
   out (10 turns) rather than wait for a rescuer.
+- **Rescues caged clanmates.** While you're still in the sewers and a clanmate is caged, it takes the ladder in The
+  Former or the Ladder. That frees them for 1 of your turns instead of 10 of theirs. It learns who is caged from
+  the game's messages on `/hobopolis` (see below), and it leaves cagebait bots (`autohobo_cagebait`) where they are:
+  a bot in the cage keeps everyone else from being caged.
 - **Town Square** until the zone it wants is open. Whenever Richard has a full set of six hobo parts it makes
   scarehobos, which kill hobos without a turn.
 - **The side zone.** Book drops only come from fights, and a zone has only about 500 hobos, so it takes the
@@ -53,6 +57,14 @@ Every choice setting it changes is put back when it finishes.
 - Book drop rates aren't known. All the books are tradeable, and the mall is often cheaper than the turns: Kissin'
   Cousins sold for about 137,000 meat and Let Me Be! about 65,000 in October 2026.
 
+## Listening to /hobopolis
+
+`autohobo_chat.ash` is a chatbot script. KoLmafia runs it for each chat message, and it records who the game says
+was imprisoned by, rescued from, or escaped from the C. H. U. M.s. While autohobo runs, it sets this as your
+`chatbotScript`, unless you already have a chatbot script of your own, and puts the setting back afterwards. For
+messages to arrive, KoLmafia's chat has to be open (the chat window, or chat in the relay browser) and listening to
+`/hobopolis`. To keep it listening between runs: `set chatbotScript = autohobo_chat.ash`.
+
 ## Settings
 
 `set autohobo_<name> = <value>`
@@ -65,4 +77,6 @@ Every choice setting it changes is put back when it finishes.
 | `mpFloor` | `150` | restore MP when it falls below this |
 | `maxPrice` | `5000` | most it pays for a sewer test item |
 | `advReserve` | `0` | adventures to leave unspent |
+| `cagebait` | `ASSBot` | comma-separated players never to free from the cage |
+| `cageMinutes` | `60` | ignore a cage report older than this (they've probably gnawed out) |
 | `debug` | `false` | print extra detail |
