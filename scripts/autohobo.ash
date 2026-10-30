@@ -489,8 +489,76 @@ boolean ah_townTurn()
 
 // ---------------------------------------------------------------- status
 
+// the zone's two skills and the books that teach them
+item[skill] ah_zoneBooks(ah_zone z)
+{
+	item[skill] books;
+	books[z.spell] = z.spellBook;
+	books[z.buff] = z.buffBook;
+	return books;
+}
+
+// where you keep a copy of the book, or "" if you have none
+string ah_bookWhere(item book)
+{
+	if(item_amount(book) > 0)
+	{
+		return "inventory";
+	}
+	if(closet_amount(book) > 0)
+	{
+		return "closet";
+	}
+	if(storage_amount(book) > 0)
+	{
+		return "Hagnk's";
+	}
+	if(shop_amount(book) > 0)
+	{
+		return "your store";
+	}
+	if(display_amount(book) > 0)
+	{
+		return "display case";
+	}
+	return "";
+}
+
+// why a skill is missing: a book you own but haven't read, or no book at all
+string ah_missingWhy(skill sk, item book)
+{
+	string where = ah_bookWhere(book);
+	if(where == "display case")
+	{
+		return sk + ": " + book + " is in your display case. Take it out and autohobo will read it.";
+	}
+	if(where != "")
+	{
+		return sk + ": you own " + book + " (" + where + ") but haven't read it. autohobo reads it before adventuring.";
+	}
+	int price = mall_price(book);
+	return sk + ": no " + book + (price > 0 ? " (mall about " + price + ")." : " (none in the mall).");
+}
+
 void ah_status()
 {
+	//the skills first: they don't depend on getting into Hobopolis
+	int missing = 0;
+	foreach i, z in ah_zones()
+	{
+		foreach sk, book in ah_zoneBooks(z)
+		{
+			if(!have_skill(sk))
+			{
+				ah_info(ah_missingWhy(sk, book));
+				missing += 1;
+			}
+		}
+	}
+	if(missing == 0)
+	{
+		ah_info("You know every Hobopolis skill.");
+	}
 	string stage = ah_stage();
 	if(stage == "")
 	{
@@ -511,16 +579,15 @@ void ah_status()
 	foreach i, z in ah_zones()
 	{
 		string state = !ah_zoneOpen(z) ? "not open yet" : ah_zonePicture(z) >= 10 ? "no hobos left" : "picture " + ah_zonePicture(z) + " of 10";
-		string missing = "";
-		if(!have_skill(z.spell))
+		string books = "";
+		foreach sk, book in ah_zoneBooks(z)
 		{
-			missing += z.spell + " (" + z.spellBook + ")";
+			if(!have_skill(sk) && ah_bookWhere(book) == "")
+			{
+				books += (books == "" ? "" : " and ") + book;
+			}
 		}
-		if(!have_skill(z.buff))
-		{
-			missing += (missing == "" ? "" : ", ") + z.buff + " (" + z.buffBook + ")";
-		}
-		ah_info(z.loc + ": " + state + ". " + (missing == "" ? "Both skills known." : "Missing: " + missing + "."));
+		ah_info(z.loc + ": " + state + ". " + (books == "" ? "No books needed here." : "Drops " + books + ", which you need."));
 	}
 }
 

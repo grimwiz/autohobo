@@ -12,7 +12,9 @@ autohobo 100        the same, spending at most 100 turns
 autohobo status     show the instance and which skills are missing, without adventuring
 ```
 
-Run `autohobo status` first: it spends no turns, and tells you whether you can get in at all.
+Run `autohobo status` first. It spends no turns. For each skill you lack, it says whether you own the book but
+haven't read it (and where it is: inventory, closet, Hagnk's, your store or display case) or have no copy (with the
+mall price). Then it shows whether you can get into Hobopolis and how far each zone has got.
 
 ## What it does
 
