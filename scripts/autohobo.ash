@@ -505,7 +505,12 @@ boolean ah_sewerTurn()
 {
 	if(my_adventures() < 10)
 	{
+		//autosea only eats and drinks at 6 adventures or fewer (autosea_dietAt); the sewers need 10, so ask for 10
+		//for this call only and leave autosea's own runs as they were
+		string dietAt = get_property("autosea_dietAt");
+		set_property("autosea_dietAt", max(10, dietAt.to_int()).to_string());
 		cli_execute("autosea diet");
+		set_property("autosea_dietAt", dietAt);
 	}
 	if(my_adventures() < 10)
 	{
