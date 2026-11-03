@@ -324,9 +324,10 @@ string ah_maximizeFor(location loc, boolean physical)
 	string terms = ah_setting("maximize", "item drop, mainstat, moxie, 0.5 hp, 3 dr");
 	if(loc == $location[A Maze of Sewer Tunnels])
 	{
-		//the umbrella passes a sewer test from the main hand; the binder adds explorations from its glyphs
+		//the umbrella passes a sewer test from the main hand; the binder adds explorations from its glyphs.
+		//The umbrella needs 100 base Muscle: asking the maximizer for one we can't wear made it drop the binder too.
 		terms = "mainstat, moxie, 0.5 hp, 3 dr";
-		if(available_amount($item[gatorskin umbrella]) > 0)
+		if(available_amount($item[gatorskin umbrella]) > 0 && can_equip($item[gatorskin umbrella]))
 		{
 			terms += ", +equip gatorskin umbrella";
 		}
@@ -682,6 +683,7 @@ void ah_run(int maxTurns)
 		if(my_adventures() <= reserve)
 		{
 			ah_info("Out of adventures (reserve " + reserve + "), and nothing more worth eating or drinking.");
+			cli_execute("autosea bedtime");	//a nightcap and rollover gear; autosea skips it while adventures are left
 			break;
 		}
 		int target = ah_targetZone(zones);
