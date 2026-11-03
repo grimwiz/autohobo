@@ -828,9 +828,14 @@ void main(string... args)
 		ah_pages();
 		return;
 	}
-	if(words[0] != "" && words[0].to_int() <= 0)
+	if(words[0] == "bedtime")
 	{
-		ah_warn("Usage: autohobo [turns] | autohobo status | autohobo pages");
+		cli_execute("autosea bedtime");	//what a run does when it stops out of adventures
+		return;
+	}
+	if(words[0] != "" && (!is_integer(words[0]) || words[0].to_int() <= 0))
+	{
+		ah_warn("Usage: autohobo [turns] | autohobo status | autohobo pages | autohobo bedtime");
 		return;
 	}
 	int turns = words[0] == "" ? -1 : words[0].to_int();
