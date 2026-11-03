@@ -48,7 +48,10 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
   the game's messages on `/hobopolis` (see below), and it leaves cagebait bots (`autohobo_cagebait`) where they are:
   a bot in the cage keeps everyone else from being caged.
 - **Town Square** until the zone it wants is open. Whenever Richard has a full set of six hobo parts it makes
-  scarehobos, which kill hobos without a turn.
+  scarehobos, which kill hobos without a turn. A hobo overkilled with one element (HP+100 damage of it) leaves that
+  element's part, so with Flavour of Magic it casts the spirit for the part Richard has fewest of (no spirit for hobo
+  skins, which are physical) and fights with pasta spells only (Stuffed Mortar Shell, then Cannelloni Cannon), so all
+  the damage is that element.
 - **Your class's instrument.** Each class can buy its own instrument at the Hobo Marketplace (a Town Square noncombat)
   for 99 hobo nickels, and only while it's that class. If you have the hobo code binder and 99 nickels and don't own
   yours, it stays in the Town Square with the binder on (the signs can't be read without it) and buys it when the
@@ -59,7 +62,7 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
   zone has no hobos left, so it announces the boss in `/hobopolis` (a clan rule, so people can queue for it) and
   moves to the next zone.
 - **Burial Ground**: spooky hobos take 1 damage from any element, so it fights them with physical damage. It uses
-  pasta spells (Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens) with any Flavour of Magic spirit removed,
+  pasta spells (Stuffed Mortar Shell, Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens, Spaghetti Spear) with any Flavour of Magic spirit removed,
   and falls back to a weapon attack if a skill doesn't hurt. Elsewhere your own combat settings fight.
 
 Every choice setting it changes is put back when it finishes.

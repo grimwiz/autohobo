@@ -278,6 +278,7 @@ boolean ah_recover()
 
 boolean[skill] ah_noDamage;
 skill ah_lastSkill;
+boolean ah_usePasta;	//fight with pasta spells only (ah_pastaFilter), set for the Town Square by ah_townSpirit
 int ah_hpBefore;
 int ah_lastRound;
 
@@ -292,20 +293,31 @@ void ah_dropSpirits()
 	}
 }
 
-string ah_physicalFilter(int round, monster enemy, string text)
+// Pasta spells only, so all the damage is the one element Flavour of Magic gives them (physical with no spirit).
+// Stuffed Mortar Shell goes first: it explodes the next round, for the most damage per MP.
+boolean ah_mortarCast;
+
+string ah_pastaFilter(int round, monster enemy, string text)
 {
 	if(round <= ah_lastRound)
 	{
 		ah_lastSkill = $skill[none];	//a new fight
+		ah_mortarCast = false;
 	}
 	ah_lastRound = round;
-	if(ah_lastSkill != $skill[none] && monster_hp() >= ah_hpBefore - 10)
+	if(ah_lastSkill != $skill[none] && ah_lastSkill != $skill[Stuffed Mortar Shell] && monster_hp() >= ah_hpBefore - 10)
 	{
 		ah_debug(ah_lastSkill + " didn't hurt the " + enemy + "; using something else");
 		ah_noDamage[ah_lastSkill] = true;
 	}
 	ah_hpBefore = monster_hp();
-	foreach sk in $skills[Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens]
+	if(!ah_mortarCast && have_skill($skill[Stuffed Mortar Shell]) && my_mp() >= mp_cost($skill[Stuffed Mortar Shell]))
+	{
+		ah_mortarCast = true;
+		ah_lastSkill = $skill[Stuffed Mortar Shell];
+		return "skill Stuffed Mortar Shell";
+	}
+	foreach sk in $skills[Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens, Spaghetti Spear]
 	{
 		if(have_skill(sk) && !(ah_noDamage contains sk) && my_mp() >= mp_cost(sk))
 		{
@@ -372,7 +384,7 @@ boolean ah_adv(location loc, monster hobo, boolean physical)
 	}
 	ah_lastRound = 999;
 	int turnsBefore = my_turncount();
-	boolean ok = adv1(loc, -1, physical ? "ah_physicalFilter" : "");
+	boolean ok = adv1(loc, -1, physical || ah_usePasta ? "ah_pastaFilter" : "");
 	ah_forgetPages();
 	if(have_effect($effect[Beaten Up]) > 0)
 	{
@@ -611,9 +623,52 @@ boolean ah_wantInstrument()
 		&& available_amount($item[hobo code binder]) > 0 && item_amount($item[hobo nickel]) >= 99;
 }
 
+// A Town Square hobo overkilled (HP+100 damage of one element) leaves the part for that element, and a scarehobo
+// needs one of each, so kill with whatever Richard has fewest of. Flavour of Magic sets the element of pasta spells;
+// with no spirit they're physical, for hobo skins. Without it (or pasta spells) your own combat settings fight.
+boolean ah_townSpirit()
+{
+	if(!have_skill($skill[Flavour of Magic]) || !(have_skill($skill[Stuffed Mortar Shell]) || have_skill($skill[Cannelloni Cannon])))
+	{
+		return false;
+	}
+	string page = visit_url("clan_hobopolis.php?place=3&action=talkrichard&whichtalk=3");
+	string[string] spirits = {
+		"pairs? of charred hobo boots?": "Spirit of Cayenne",
+		"pairs? of frozen hobo eyes": "Spirit of Peppermint",
+		"piles? of stinking hobo guts": "Spirit of Garlic",
+		"creepy hobo skulls?": "Spirit of Wormwood",
+		"hobo crotch(es)?": "Spirit of Bacon Grease",
+		"hobo skins?": ""
+	};
+	string want = "";
+	int fewest = 999999;
+	foreach part, spirit in spirits
+	{
+		int n = ah_richardParts(page, part);
+		if(n < fewest)
+		{
+			fewest = n;
+			want = spirit;
+		}
+	}
+	if(want == "")
+	{
+		ah_dropSpirits();
+	}
+	else if(have_effect(want.to_effect()) == 0)
+	{
+		ah_dropSpirits();
+		ah_info("Richard is shortest of the parts " + want + " makes (" + fewest + "): casting it.");
+		cli_execute("cast 1 " + want);
+	}
+	return true;
+}
+
 boolean ah_townTurn()
 {
 	ah_makeScarehobos();
+	ah_usePasta = ah_townSpirit();
 	item instrument = ah_classInstrument();
 	boolean shopping = ah_wantInstrument();
 	int[int] route = {272: 1, 231: 2, 245: 2, 253: 3, 256: 1, 258: 1};
@@ -623,6 +678,7 @@ boolean ah_townTurn()
 	}
 	int had = item_amount(instrument);
 	boolean ok = ah_adv($location[Hobopolis Town Square], $monster[Normal hobo], false);
+	ah_usePasta = false;
 	if(shopping && item_amount(instrument) > had)
 	{
 		ah_info("Bought " + instrument + " at the Hobo Marketplace.");
