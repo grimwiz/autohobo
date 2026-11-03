@@ -319,6 +319,8 @@ string ah_physicalFilter(int round, monster enemy, string text)
 
 // ---------------------------------------------------------------- one adventure
 
+boolean ah_wantInstrument();
+
 string ah_maximizeFor(location loc, boolean physical)
 {
 	string terms = ah_setting("maximize", "item drop, mainstat, moxie, 0.5 hp, 3 dr");
@@ -343,6 +345,10 @@ string ah_maximizeFor(location loc, boolean physical)
 	else
 	{
 		terms += ", spell damage percent";
+	}
+	if(loc == $location[Hobopolis Town Square] && ah_wantInstrument())
+	{
+		terms += ", +equip hobo code binder";	//to read the marketplace signs
 	}
 	return terms;
 }
@@ -578,10 +584,50 @@ void ah_makeScarehobos()
 	}
 }
 
+// ---------------------------------------------------------------- the marketplace
+// The Hobo Marketplace is a Town Square noncombat. Each class can buy its own instrument there for 99 hobo nickels,
+// and only while it's that class, so it's worth getting while you are. The signs can only be read with the hobo code
+// binder equipped. The route is the one taken for the spaghetti-box banjo on 2026-04-18: go in, Shopping, Housewares,
+// Entertainment, Music, buy.
+
+item ah_classInstrument()
+{
+	switch(my_class())
+	{
+	case $class[Seal Clubber]: return $item[sealskin drum];
+	case $class[Turtle Tamer]: return $item[washboard shield];
+	case $class[Pastamancer]: return $item[spaghetti-box banjo];
+	case $class[Sauceror]: return $item[marinara jug];
+	case $class[Disco Bandit]: return $item[makeshift castanets];
+	case $class[Accordion Thief]: return $item[left-handed melodica];
+	}
+	return $item[none];
+}
+
+boolean ah_wantInstrument()
+{
+	item it = ah_classInstrument();
+	return it != $item[none] && available_amount(it) == 0 && ah_bookWhere(it) == ""
+		&& available_amount($item[hobo code binder]) > 0 && item_amount($item[hobo nickel]) >= 99;
+}
+
 boolean ah_townTurn()
 {
 	ah_makeScarehobos();
-	return ah_adv($location[Hobopolis Town Square], $monster[Normal hobo], false);
+	item instrument = ah_classInstrument();
+	boolean shopping = ah_wantInstrument();
+	int[int] route = {272: 1, 231: 2, 245: 2, 253: 3, 256: 1, 258: 1};
+	foreach n, opt in route
+	{
+		ah_overrideProperty("choiceAdventure" + n, shopping ? opt.to_string() : n == 272 ? "2" : "0");
+	}
+	int had = item_amount(instrument);
+	boolean ok = ah_adv($location[Hobopolis Town Square], $monster[Normal hobo], false);
+	if(shopping && item_amount(instrument) > had)
+	{
+		ah_info("Bought " + instrument + " at the Hobo Marketplace.");
+	}
+	return ok;
 }
 
 // ---------------------------------------------------------------- status
@@ -621,6 +667,14 @@ void ah_status()
 	if(missing == 0)
 	{
 		ah_info("Every Hobopolis skill is permed.");
+	}
+	item instrument = ah_classInstrument();
+	if(instrument != $item[none])
+	{
+		ah_info(ah_wantInstrument() ? "Will buy " + instrument + " (your class's instrument) at the Hobo Marketplace when it turns up in the Town Square."
+			: available_amount(instrument) > 0 || ah_bookWhere(instrument) != "" ? "You have " + instrument + ", your class's instrument."
+			: available_amount($item[hobo code binder]) == 0 ? "No hobo code binder, so the Hobo Marketplace and " + instrument + " are out of reach."
+			: instrument + " (your class's instrument) costs 99 hobo nickels; you have " + item_amount($item[hobo nickel]) + ".");
 	}
 	string stage = ah_stage();
 	if(stage == "")
@@ -703,8 +757,9 @@ void ah_run(int maxTurns)
 		{
 			acted = ah_sewerTurn();
 		}
-		else if(!ah_zoneOpen(z))
+		else if(!ah_zoneOpen(z) || ah_wantInstrument())
 		{
+			//the marketplace, with your class's instrument, only turns up in the Town Square
 			acted = ah_townTurn();
 		}
 		else

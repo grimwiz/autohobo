@@ -48,6 +48,10 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
   a bot in the cage keeps everyone else from being caged.
 - **Town Square** until the zone it wants is open. Whenever Richard has a full set of six hobo parts it makes
   scarehobos, which kill hobos without a turn.
+- **Your class's instrument.** Each class can buy its own instrument at the Hobo Marketplace (a Town Square noncombat)
+  for 99 hobo nickels, and only while it's that class. If you have the hobo code binder and 99 nickels and don't own
+  yours, it stays in the Town Square with the binder on (the signs can't be read without it) and buys it when the
+  marketplace turns up: Shopping, Housewares, Entertainment, Music.
 - **The side zone.** Book drops only come from fights, and a zone has only about 500 hobos, so it takes the
   noncombats that *add* hobos (Hot Dog door, Returning to the Tomb, and so on). It skips the ones that kill hobos without
   drops (tirevalanche, the zombie dance, barfights), and it **never fights a boss**. When a zone's boss turns up, that
