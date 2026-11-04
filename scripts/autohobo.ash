@@ -520,16 +520,33 @@ void ah_cageAfterTurn()
 	}
 }
 
+//"autosea diet" for Hobopolis, with autosea's settings changed for this call only (autosea's own runs keep theirs):
+//no spleen kept free for sea jelly, since Fishy does nothing here, and (if dietAt is given) eating from dietAt adventures left
+void ah_diet(int dietAt)
+{
+	string oldDietAt = get_property("autosea_dietAt");
+	string oldJelly = get_property("autosea_jellySpleen");
+	if(dietAt > 0)
+	{
+		set_property("autosea_dietAt", max(dietAt, oldDietAt.to_int()).to_string());
+	}
+	set_property("autosea_jellySpleen", "false");
+	try
+	{
+		cli_execute("autosea diet");
+	}
+	finally
+	{
+		set_property("autosea_dietAt", oldDietAt);
+		set_property("autosea_jellySpleen", oldJelly);
+	}
+}
+
 boolean ah_sewerTurn()
 {
 	if(my_adventures() < 10)
 	{
-		//autosea only eats and drinks at 6 adventures or fewer (autosea_dietAt); the sewers need 10, so ask for 10
-		//for this call only and leave autosea's own runs as they were
-		string dietAt = get_property("autosea_dietAt");
-		set_property("autosea_dietAt", max(10, dietAt.to_int()).to_string());
-		cli_execute("autosea diet");
-		set_property("autosea_dietAt", dietAt);
+		ah_diet(10);	//autosea only eats and drinks at 6 adventures or fewer (autosea_dietAt); the sewers need 10
 	}
 	if(my_adventures() < 10)
 	{
@@ -788,7 +805,7 @@ void ah_run(int maxTurns)
 	{
 		if(my_adventures() <= reserve)
 		{
-			cli_execute("autosea diet");	//eat and drink rather than stop (autosea fills the organs for every auto script)
+			ah_diet(0);	//eat and drink rather than stop (autosea fills the organs for every auto script)
 		}
 		if(my_adventures() <= reserve)
 		{

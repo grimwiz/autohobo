@@ -38,8 +38,9 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
 
 - **Sewers** if you haven't been through them. It keeps sewer wads in stock (the clan custom: the other test items are
   rarely worth their price; `autohobo_sewerItems` adds them), equips a gatorskin umbrella if you have one and the
-  100 base Muscle it needs, and wears your hobo code binder. Out of adventures it eats and drinks (`autosea diet`),
-  then ends the day with a nightcap and rollover gear (`autosea bedtime`).
+  100 base Muscle it needs, and wears your hobo code binder. Out of adventures it eats and drinks (`autosea diet`,
+  using all the spleen: Fishy does nothing here, so none is kept for sea jelly), then ends the day with a nightcap and
+  rollover gear (`autosea bedtime`).
 - **If you get caged**, it follows the clan rule: it asks for a rescue in `/hobopolis` and `/clan`, then stops. Run it
   again later. It leaves the cage when someone comes down the ladder for you (heard on `/hobopolis`), or gnaws out
   (10 turns) once `autohobo_gnawAfter` minutes (60) pass without a rescue.
