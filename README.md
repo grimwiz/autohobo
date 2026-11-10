@@ -66,7 +66,8 @@ Before each adventure it re-reads the Hobopolis pages (KoLmafia keeps no Hobopol
   pasta spells (Stuffed Mortar Shell, Weapon of the Pastalord, Cannelloni Cannon, Ravioli Shurikens, Spaghetti Spear) with any Flavour of Magic spirit removed,
   and falls back to a weapon attack if a skill doesn't hurt. Elsewhere your own combat settings fight.
 
-Every choice setting it changes is put back when it finishes.
+It never rests (clan sofa, campground) to restore HP or MP, since that costs turns; free rests and items still work.
+Every setting it changes is put back when it finishes.
 
 ## Clan rules (Not Dead Yet)
 

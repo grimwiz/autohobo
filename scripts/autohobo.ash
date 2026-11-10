@@ -916,6 +916,20 @@ void main(string... args)
 	{
 		ah_setChoices();
 		ah_overrideProperty("choiceAdventureScript", "");
+		//never spend turns resting to restore: on 2026-11-10 an MP top-up slept on the clan sofa for 6 turns, leaving
+		//9 adventures, and the sewers need 10 to enter
+		foreach i, prop in $strings[hpAutoRecoveryItems, mpAutoRecoveryItems]
+		{
+			string kept = "";
+			foreach j, way in get_property(prop).split_string(";")
+			{
+				if(way != "sleep on your clan sofa" && way != "rest at your campground")
+				{
+					kept += (kept == "" ? "" : ";") + way;
+				}
+			}
+			ah_overrideProperty(prop, kept);
+		}
 		//listen to /hobopolis for caged clanmates, unless you already run a chatbot script of your own
 		string bot = get_property("chatbotScript");
 		if(bot == "")
