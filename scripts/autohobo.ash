@@ -228,7 +228,7 @@ void ah_setChoices()
 {
 	int[int] picks = {
 		197: 1, 198: 1, 199: 1,	//sewers: take the tunnel (each test item passed counts as an extra exploration)
-		211: 0, 212: 0,	//caged in the sewers: stop, and ask for rescue first (ah_sewerTurn decides what to do next)
+		211: 0, 212: 0,	//the cage: never reached through these (ah_sewerVisit takes it by hand; 0 here would abort the script)
 		200: 2, 225: 3, 230: 2, 272: 2,	//Town Square: no Hodgman, no tent, no binder or marketplace
 		201: 2, 206: 3, 207: 1, 213: 2, 291: 2,	//Burnbarrel: more hot hobos; no tires, no Ol' Scratch
 		202: 2, 215: 3, 217: 1, 273: 2, 292: 2,	//Esplanade: more cold hobos; no Frosty
@@ -365,6 +365,55 @@ string ah_maximizeFor(location loc, boolean physical)
 	return terms;
 }
 
+// One sewer adventure, by hand. KoLmafia can't be told to stop at the C. H. U. M. cage (choices 211 and 212):
+// "0" (stop) aborts the whole script, which on 2026-11-17 ended autohobo before it could ask for a rescue, and
+// "Wait for rescue" only shows the cage again. So the tunnels are visited directly, the other sewer choices and the
+// fights run as usual, and the cage page is left alone unless ah_cagePlan chose to gnaw out (_autohobo_cagePick 1).
+boolean ah_sewerVisit(string filter)
+{
+	int turnsBefore = my_turncount();
+	string page = visit_url("adventure.php?snarfblat=" + $location[A Maze of Sewer Tunnels].to_int());
+	for step from 1 to 20
+	{
+		if(handling_choice())
+		{
+			int c = last_choice();
+			if(c == 211 || c == 212)
+			{
+				int pick = get_property("_autohobo_cagePick").to_int();
+				if(pick == 0)
+				{
+					return true;	//caged: ah_cageAfterTurn asks for a rescue
+				}
+				page = run_choice(pick);
+				continue;
+			}
+			page = run_choice(-1);	//the tunnel choices, from their choiceAdventure settings
+			continue;
+		}
+		if(current_round() > 0 || page.contains_text("fight.php"))
+		{
+			int turns = my_turncount();
+			page = filter == "" ? run_combat() : run_combat(filter);
+			if(current_round() > 0 && my_turncount() == turns)
+			{
+				//run_combat sometimes returns without acting on the first fight after a page visit
+				visit_url("fight.php");
+				page = filter == "" ? run_combat() : run_combat(filter);
+			}
+			if(current_round() > 0)
+			{
+				ah_warn("A sewer fight is still open after two tries; finish it in the browser.");
+				return false;
+			}
+			continue;
+		}
+		break;
+	}
+	//false when nothing happened (a shut grate says "You shouldn't be here"); the cage spends no turn but is an encounter
+	return my_turncount() > turnsBefore || get_property("lastEncounter") != "";
+}
+
 boolean ah_adv(location loc, monster hobo, boolean physical)
 {
 	set_location(loc);
@@ -384,7 +433,8 @@ boolean ah_adv(location loc, monster hobo, boolean physical)
 	}
 	ah_lastRound = 999;
 	int turnsBefore = my_turncount();
-	boolean ok = adv1(loc, -1, physical || ah_usePasta ? "ah_pastaFilter" : "");
+	string filter = physical || ah_usePasta ? "ah_pastaFilter" : "";
+	boolean ok = loc == $location[A Maze of Sewer Tunnels] ? ah_sewerVisit(filter) : adv1(loc, -1, filter);
 	ah_forgetPages();
 	if(have_effect($effect[Beaten Up]) > 0)
 	{
@@ -475,6 +525,7 @@ string ah_requestRescue()
 // true if this turn may go ahead; false (with the reason said) to stop the run while waiting for a rescue
 boolean ah_cagePlan()
 {
+	set_property("_autohobo_cagePick", "0");	//stay in the cage unless decided below
 	string cagedAt = get_property("_autohobo_myCageAt");
 	if(cagedAt == "")
 	{
@@ -482,18 +533,15 @@ boolean ah_cagePlan()
 	}
 	if(get_property("_autohobo_rescued").to_boolean())
 	{
-		ah_info("A clanmate went down the ladder for you: leaving the cage.");
-		ah_overrideProperty("choiceAdventure211", "2");
-		ah_overrideProperty("choiceAdventure212", "2");
-		return true;
+		ah_info("A clanmate went down the ladder for you: back to the tunnels.");
+		return true;	//if the cage still shows, it stays (no gnawing) and this run stops
 	}
 	int minutes = (now_to_int() - cagedAt.to_int()) / 60000;
 	int limit = ah_setting("gnawAfter", "60").to_int();
 	if(minutes >= limit)
 	{
 		ah_info("No rescue in " + minutes + " minutes: gnawing out of the cage (10 turns).");
-		ah_overrideProperty("choiceAdventure211", "1");
-		ah_overrideProperty("choiceAdventure212", "1");
+		set_property("_autohobo_cagePick", "1");
 		return true;
 	}
 	ah_warn("You're caged in the sewers and asked for a rescue " + minutes + " minutes ago. Run autohobo again later: it "
@@ -505,6 +553,12 @@ void ah_cageAfterTurn()
 {
 	if(get_property("lastEncounter") != "Despite All Your Rage")
 	{
+		if(get_property("_autohobo_myCageAt") != "")
+		{
+			ah_info("Out of the cage.");	//a clanmate came down the ladder: this turn wasn't the cage
+			set_property("_autohobo_myCageAt", "");
+			set_property("_autohobo_rescued", "");
+		}
 		return;
 	}
 	if(get_property("_autohobo_myCageAt") == "")
@@ -512,7 +566,7 @@ void ah_cageAfterTurn()
 		set_property("_autohobo_myCageAt", now_to_int().to_string());
 		ah_warn("The C. H. U. M.s caged you. Asked for a rescue in /hobopolis and /clan: \"" + ah_requestRescue() + "\"");
 	}
-	else if(get_property("choiceAdventure211") != "0")
+	else if(get_property("_autohobo_cagePick") != "0")
 	{
 		//we chose to leave (a rescue arrived, or gnawing): the cage is behind us
 		set_property("_autohobo_myCageAt", "");
@@ -574,7 +628,7 @@ boolean ah_sewerTurn()
 			+ "the instance has to be flooded, then a basement admin opens the sewer grate again (1,000,000 meat).");
 	}
 	ah_cageAfterTurn();
-	if(get_property("_autohobo_myCageAt") != "" && get_property("choiceAdventure211") == "0")
+	if(get_property("_autohobo_myCageAt") != "" && get_property("_autohobo_cagePick") == "0")
 	{
 		return false;	//just caged: wait for a rescue rather than carry on
 	}
