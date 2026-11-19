@@ -517,9 +517,11 @@ string ah_cagedClanmate()
 	return minutes > ah_setting("cageMinutes", "60").to_int() ? "" : who;
 }
 
-// You caged: the clan asks you to request a rescue in /hobopolis and /clan before gnawing out. autohobo asks once
-// and stops; a later run waits on a rescue (heard by autohobo_chat.ash), and only after autohobo_gnawAfter minutes
-// with none does it gnaw out.
+// You caged: the clan asks you to request a rescue in /hobopolis and /clan before gnawing out. autohobo asks once,
+// then waits in the run (it's never left in the cage, user 2026-11-19): up to autohobo_gnawAfter minutes for a rescue
+// (heard by autohobo_chat.ash), then it gnaws out, and either way carries on. A run that starts already caged (the one
+// that was waiting was stopped) gnaws out straight away.
+boolean ah_cagedThisRun = false;
 string ah_requestRescue()
 {
 	string msg = "I've been caged by the C. H. U. M.s in the sewers. Could someone still in the sewers free me via the ladder, please?";
@@ -528,7 +530,7 @@ string ah_requestRescue()
 	return msg;
 }
 
-// true if this turn may go ahead; false (with the reason said) to stop the run while waiting for a rescue
+// true when the turn may go ahead: out of the cage, rescued, or gnawing out (_autohobo_cagePick 1)
 boolean ah_cagePlan()
 {
 	set_property("_autohobo_cagePick", "0");	//stay in the cage unless decided below
@@ -542,17 +544,31 @@ boolean ah_cagePlan()
 		ah_info("A clanmate went down the ladder for you: back to the tunnels.");
 		return true;	//if the cage still shows, it stays (no gnawing) and this run stops
 	}
-	int minutes = (now_to_int() - cagedAt.to_int()) / 60000;
 	int limit = ah_setting("gnawAfter", "60").to_int();
-	if(minutes >= limit)
+	if(!ah_cagedThisRun)
 	{
-		ah_info("No rescue in " + minutes + " minutes: gnawing out of the cage (10 turns).");
+		ah_info("Still caged from an earlier run and nobody has come down the ladder: gnawing out (10 turns).");
 		set_property("_autohobo_cagePick", "1");
 		return true;
 	}
-	ah_warn("You're caged in the sewers and asked for a rescue " + minutes + " minutes ago. Run autohobo again later: it "
-		+ "leaves the cage when someone frees you, or gnaws out after " + limit + " minutes (autohobo_gnawAfter).");
-	return false;
+	int minutes = (now_to_int() - cagedAt.to_int()) / 60000;
+	while(minutes < limit && !get_property("_autohobo_rescued").to_boolean())
+	{
+		if(minutes % 10 == 0)
+		{
+			ah_info("Caged: waiting for a rescue, " + minutes + " of " + limit + " minutes (autohobo_gnawAfter), then gnawing out.");
+		}
+		wait(60);
+		minutes = (now_to_int() - cagedAt.to_int()) / 60000;
+	}
+	if(get_property("_autohobo_rescued").to_boolean())
+	{
+		ah_info("A clanmate went down the ladder for you: back to the tunnels.");
+		return true;
+	}
+	ah_info("No rescue in " + minutes + " minutes: gnawing out of the cage (10 turns).");
+	set_property("_autohobo_cagePick", "1");
+	return true;
 }
 
 void ah_cageAfterTurn()
@@ -569,6 +585,7 @@ void ah_cageAfterTurn()
 	}
 	if(get_property("_autohobo_myCageAt") == "")
 	{
+		ah_cagedThisRun = true;
 		set_property("_autohobo_myCageAt", now_to_int().to_string());
 		ah_warn("The C. H. U. M.s caged you. Asked for a rescue in /hobopolis and /clan: \"" + ah_requestRescue() + "\"");
 	}
@@ -633,11 +650,7 @@ boolean ah_sewerTurn()
 		ah_warn("The game won't let you into the sewers. Your clan's Hobopolis is probably closed: after Hodgman dies "
 			+ "the instance has to be flooded, then a basement admin opens the sewer grate again (1,000,000 meat).");
 	}
-	ah_cageAfterTurn();
-	if(get_property("_autohobo_myCageAt") != "" && get_property("_autohobo_cagePick") == "0")
-	{
-		return false;	//just caged: wait for a rescue rather than carry on
-	}
+	ah_cageAfterTurn();	//just caged: the next sewer turn's ah_cagePlan waits for a rescue, then gnaws out
 	if(caged != "" && get_property("lastEncounter") == "The Former or the Ladder")
 	{
 		ah_info("Went down the ladder for " + caged + ".");
