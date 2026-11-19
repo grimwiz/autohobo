@@ -133,6 +133,12 @@ string ah_stage()
 	{
 		return "town";
 	}
+	//caged by the C. H. U. M.s: the Hobopolis page doesn't show the way into the sewers then, but you're in them, and
+	//the cage plan (wait for a rescue, or gnaw out) has to run (2026-11-19: "Can't find a Hobopolis instance" instead)
+	if(get_property("_autohobo_myCageAt") != "")
+	{
+		return "sewers";
+	}
 	string page = visit_url("clan_hobopolis.php");
 	if(page.contains_text("adventure.php?snarfblat=166"))
 	{
