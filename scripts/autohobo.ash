@@ -949,7 +949,8 @@ void ah_pages()
 {
 	foreach url in $strings[clan_hobopolis.php, clan_hobopolis.php?place=2, clan_basement.php?fromabove=1]
 	{
-		string text = create_matcher("<[^>]*>", visit_url(url)).replace_all(" ");
+		string text = create_matcher("(?is)<(script|style)[^>]*>.*?</\\1>", visit_url(url)).replace_all(" ");	//just what the page says
+		text = create_matcher("<[^>]*>", text).replace_all(" ");
 		text = create_matcher("\\s+", text).replace_all(" ");
 		ah_info(url + ": " + (text.length() > 1500 ? text.substring(0, 1500) + "..." : text));
 	}
